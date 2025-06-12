@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\BuildingPart;
 use Illuminate\Http\Request;
+use App\Services\BuildingPartServiceInterface;
 
 class BuildingPartController extends Controller
 {
+    protected BuildingPartServiceInterface $buildingPartService;
+
+    public function __construct(BuildingPartServiceInterface $buildingPartService)
+    {
+        $this->buildingPartService = $buildingPartService;
+    }
+
     public function index(Project $project)
     {
-        $buildingParts = $project->buildingParts;
+        $buildingParts = $this->buildingPartService->getByProject($project);
         return view('building_parts.index', compact('project', 'buildingParts'));
     }
 
@@ -26,7 +34,7 @@ class BuildingPartController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $project->buildingParts()->create($validated);
+        $this->buildingPartService->createForProject($project, $validated);
 
         return redirect()->route('projects.building-parts.index', $project)
             ->with('success', 'Building Part created successfully.');
@@ -34,7 +42,6 @@ class BuildingPartController extends Controller
 
     public function show(Project $project, BuildingPart $buildingPart)
     {
-        // Pastikan bagian ini hanya menampilkan building part milik project terkait
         if ($buildingPart->project_id !== $project->id) {
             abort(404);
         }
@@ -62,7 +69,7 @@ class BuildingPartController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $buildingPart->update($validated);
+        $this->buildingPartService->update($buildingPart, $validated);
 
         return redirect()->route('projects.building-parts.index', $project)
             ->with('success', 'Building Part updated successfully.');
@@ -74,7 +81,7 @@ class BuildingPartController extends Controller
             abort(404);
         }
 
-        $buildingPart->delete();
+        $this->buildingPartService->delete($buildingPart);
 
         return redirect()->route('projects.building-parts.index', $project)
             ->with('success', 'Building Part deleted successfully.');
